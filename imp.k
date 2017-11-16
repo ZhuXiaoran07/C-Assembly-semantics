@@ -35,9 +35,10 @@ module IMP-SYNTAX
  syntax MemInstr ::= "LDR" | "LDRB" | "LDRBT" | "LDRH" | "LDRSB" | "LDRSH" | "LDRT" 
 				| "STR" | "STRB" | "STRBT" | "STRH" | "STRT"
 				
- syntax Instr ::= MemInstr Reg Addr ";"
+ syntax Instr ::= MemInstr Reg "," Addr ";"
                 | AriInstr
-				| BoolInstr
+		//		| BoolInstr 
+				| JumInstr Id "," Reg "," Reg ";"
  
  
  // Arithmetic
@@ -46,12 +47,12 @@ module IMP-SYNTAX
 					| "div" Reg "," Reg "," Reg ";" [strict(2, 3)]
 					| "mul" Reg "," Reg "," Reg ";" [strict(2, 3)]
 					| "mov" Reg "," Reg ";" 
-					| "or"
-					| "and"
+					| "or"  Reg "," Reg "," Reg ";" [strict(2, 3)]
+					| "and" Reg "," Reg "," Reg ";" [strict(2, 3)]
 					//| "B"  Addr ";"
 					| "BX" Reg ";"
 				 
-  syntax BoolInstr ::= "beq" 
+ syntax JumInstr ::= "beq" 
 					 | "bne"
 					 | "blt"
 					 | "ble"
@@ -80,11 +81,11 @@ module IMP
 				
 				
  //Assembly
-  rule  <k> (LDR I:Int I1:Int ; => .) ... </k>
+  rule  <k> (LDR I:Int, I1:Int ; => .) ... </k>
         <store> ... I1 |-> I2:Int ... </store>
         <reg> R:Map => R [I2 <- I] </reg>		
  
-  rule  <k> STR I:Int I1:Int ; => . ... </k>
+  rule  <k> STR I:Int, I1:Int ; => . ... </k>
         <store>  M:Map => M[I1 <- I] </store>
 	
   rule <k> add I:Int , I2:Int , I3:Int ; =>. ...</k>
@@ -95,6 +96,18 @@ module IMP
        <reg> R:Map => R[I2 *Int I3 <- I] </reg>
   rule <k> div I:Int , I2:Int , I3:Int ; =>. ...</k>
        <reg> R:Map => R[I2 /Int I3 <- I] </reg>	
+  rule <k> or I:Int , I2:Int , I3:Int ; =>. ... </k>
+       <reg> R:Map => R[I2 |Int I3 <- I] </reg>
+  rule <k> and I:Int , I2:Int , I3:Int ; =>. ... </k>
+       <reg> R:Map => R[I2 &Int I3 <- I] </reg>
+  rule <k> beq X:Id , I:Int , I2:Int ; => branch(I ==Int I2, X)  ...</k>
+  rule <k> bne X:Id , I:Int , I2:Int ; => branch(I =/=Int I2, X) ...</k>
+  rule <k> blt X:Id , I:Int , I2:Int ; => branch(I <Int I2, X) ...</k>
+  rule <k> ble X:Id , I:Int , I2:Int ; => branch(I <=Int I2, X) ...</k>
+  
+  syntax KItem ::= "branch""("Bool"," Id")"
+  rule branch(true, X:Id) => jumpTo(X)
+  rule branch(false, _) => .   
 
 // AExp
   rule <k> X:Id => I ...</k>
