@@ -9,13 +9,14 @@ module IMP-SYNTAX
                  > "spawn" Block
                  > Id "=" AExp                [strict(2)]
                  | "(" AExp ")"               [bracket]
+				 
   syntax BExp  ::= Bool
                  | AExp "<=" AExp             [seqstrict, latex({#1}\leq{#2})]
                  | "!" BExp                   [strict]
                  > BExp "&&" BExp             [left, strict(1)]
                  | "(" BExp ")"               [bracket]
   syntax Block ::= "{" Stmts "}"
-  syntax Stmt  ::= Block
+  syntax Stmt  ::= Block | Instr
                  | AExp ";"                   [strict]
                  | "if" "(" BExp ")"
                    Block "else" Block         [strict(1)]
@@ -25,12 +26,35 @@ module IMP-SYNTAX
                  | "halt" ";"
                  > "join" AExp ";"            [strict]
 				 
-  syntax Reg   ::= Ints				 
-  syntax Instr ::= "add" Reg "," Reg "," Reg ";" [strict(2, 3)]
-				 | "sub" Reg "," Reg "," Reg ";" [strict(2, 3)]
-				 | "div" Reg "," Reg ";"         [strict(1, 2)]
-				 | "mov" Reg "," Reg ";" 
-
+ // syntax of assembly code
+ syntax Reg   ::= Ints		
+ syntax Addr  ::= Ints
+ 
+ // Load/Store
+ 
+ syntax MemInstr ::= "LDR" | "LDRB" | "LDRBT" | "LDRH" | "LDRSB" | "LDRSH" | "LDRT" 
+				| "STR" | "STRB" | "STRBT" | "STRH" | "STRT"
+				
+ syntax Instr ::= MemInstr Reg Addr ";"
+                | AriInstr
+				| BoolInstr
+ 
+ 
+ // Arithmetic
+  syntax AriInstr ::= "add" Reg "," Reg "," Reg ";" [strict(2, 3)]
+					| "sub" Reg "," Reg "," Reg ";" [strict(2, 3)]
+					| "div" Reg "," Reg "," Reg ";" [strict(2, 3)]
+					| "mul" Reg "," Reg "," Reg ";" [strict(2, 3)]
+					| "mov" Reg "," Reg ";" 
+					| "or"
+					| "and"
+					//| "B"  Addr ";"
+					| "BX" Reg ";"
+				 
+  syntax BoolInstr ::= "beq" 
+					 | "bne"
+					 | "blt"
+					 | "ble"
   syntax Ids   ::= List{Id,","}
   syntax AExps ::= List{AExp,","}
   syntax Stmts ::= List{Stmt,""}
@@ -42,18 +66,35 @@ module IMP
   imports IMP-SYNTAX
   syntax KResult ::= Int | Bool | String
 
+  
+  
+  
   configuration <T color="yellow">
-                  <threads color="orange">
-                    <thread multiplicity="*" color="blue">
                       <k color="green"> $PGM:Stmts </k>
                       <env color="LightSkyBlue"> .Map </env>
-                      <id color="black"> 0 </id>
-                    </thread>
-                  </threads>
                   <store color="red"> .Map </store>
+				  <reg> .Map   </reg>
                   <in color="magenta" stream="stdin"> .List </in>
                   <out color="Orchid" stream="stdout"> .List </out>
                 </T>
+				
+				
+ //Assembly
+  rule  <k> (LDR I:Int I1:Int ; => .) ... </k>
+        <store> ... I1 |-> I2:Int ... </store>
+        <reg> R:Map => R [I2 <- I] </reg>		
+ 
+  rule  <k> STR I:Int I1:Int ; => . ... </k>
+        <store>  M:Map => M[I1 <- I] </store>
+	
+  rule <k> add I:Int , I2:Int , I3:Int ; =>. ...</k>
+       <reg> R:Map => R[I2 +Int I3 <- I] </reg>
+  rule <k> sub I:Int , I2:Int , I3:Int ; =>. ...</k>
+       <reg> R:Map => R[I2 -Int I3 <- I] </reg>
+  rule <k> mul I:Int , I2:Int , I3:Int ; =>. ...</k>
+       <reg> R:Map => R[I2 *Int I3 <- I] </reg>
+  rule <k> div I:Int , I2:Int , I3:Int ; =>. ...</k>
+       <reg> R:Map => R[I2 /Int I3 <- I] </reg>	
 
 // AExp
   rule <k> X:Id => I ...</k>
@@ -70,7 +111,7 @@ module IMP
 // BExp
   rule I1 <= I2 => I1 <=Int I2
   rule ! T => notBool T
-  rule true && B => B
+  rule true && B:Bool => B
   rule false && _ => false
 // Block
   rule <k> {Ss} => Ss ~> Rho ...</k> <env> Rho </env>  [structural]
@@ -82,7 +123,7 @@ module IMP
        <store>... N |-> (_ => I) ...</store>  [assignment]
   rule if (true)  S else _ => S
   rule if (false) _ else S => S
-  rule while (B) S => if (B) {S while (B) S} else {.Stmts}  [structural]
+  rule while (B:Bool) S => if (B) {S while (B) S} else {.Stmts}  [structural]
 
   rule <k> int (X,Xs => Xs); ...</k>
        <env> Rho => Rho[X <- !N:Int] </env>
@@ -100,11 +141,12 @@ module IMP
 
   rule <k> halt; ~> _ => . </k>
 
-  rule <k> spawn S => !T:Int ...</k> <env> Rho </env>
+  // remove the semantics for concurrent program
+ /* rule <k> spawn S => !T:Int ...</k> <env> Rho </env>
        (.Bag => <thread>... <k> S </k> <env> Rho </env> <id> !T </id> ...</thread>)
   rule <k> join(T:Int); => . ...</k>
        <thread>... <k> . </k> <id> T </id> ...</thread>
-
+*/
 // Stmts
   rule .Stmts => .                 [structural]
   rule S:Stmt Ss:Stmts => S ~> Ss  [structural]
