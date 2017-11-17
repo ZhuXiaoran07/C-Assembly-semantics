@@ -23,6 +23,7 @@ module IMP-SYNTAX
                  | "while" "(" BExp ")" Block
                  | "int" Ids ";"
                  | "print" "(" AExps ")" ";"
+				 | Id ":" Instrs
                  | "halt" ";"
                  > "join" AExp ";"            [strict]
 				 
@@ -60,6 +61,7 @@ module IMP-SYNTAX
   syntax AExps ::= List{AExp,","}
   syntax Stmts ::= List{Stmt,""}
   syntax Ints  ::= List{Int, ""}
+  syntax Instrs::= List{Instr, ""}
 endmodule
 
 
@@ -72,6 +74,7 @@ module IMP
   
   configuration <T color="yellow">
                       <k color="green"> $PGM:Stmts </k>
+					  <pgm> .Map </pgm>
                       <env color="LightSkyBlue"> .Map </env>
                   <store color="red"> .Map </store>
 				  <reg> .Map   </reg>
@@ -105,7 +108,11 @@ module IMP
   rule <k> blt X:Id , I:Int , I2:Int ; => branch(I <Int I2, X) ...</k>
   rule <k> ble X:Id , I:Int , I2:Int ; => branch(I <=Int I2, X) ...</k>
   
-  syntax KItem ::= "branch""("Bool"," Id")"
+  syntax KItem ::= branch(Bool, Id)
+				 | jumpTo(Id)
+
+  rule <k> jumpTo(X) ~> _ => K </k>
+       <pgm> ... X |-> K ... </pgm>
   rule branch(true, X:Id) => jumpTo(X)
   rule branch(false, _) => .   
 
@@ -137,6 +144,9 @@ module IMP
   rule if (true)  S else _ => S
   rule if (false) _ else S => S
   rule while (B:Bool) S => if (B) {S while (B) S} else {.Stmts}  [structural]
+  
+  rule <k> X:Id : Is:Instrs => . ... </k>
+       <pgm>... .Map => X |-> (Is) ...</pgm>
 
   rule <k> int (X,Xs => Xs); ...</k>
        <env> Rho => Rho[X <- !N:Int] </env>
