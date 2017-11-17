@@ -28,8 +28,8 @@ module IMP-SYNTAX
                  > "join" AExp ";"            [strict]
 				 
  // syntax of assembly code
- syntax Reg   ::= Ints		
- syntax Addr  ::= Ints
+ syntax Reg   ::= Int		
+ syntax Addr  ::= Int
  
  // Load/Store
  
@@ -38,8 +38,8 @@ module IMP-SYNTAX
 				
  syntax Instr ::= MemInstr Reg "," Addr ";"
                 | AriInstr
-		//		| BoolInstr 
-				| JumInstr Id "," Reg "," Reg ";"
+				| "jmp" Id ";"
+				| JumInstr Id "," Reg "," Reg ";" [strict(2, 3)]
  
  
  // Arithmetic
@@ -57,6 +57,7 @@ module IMP-SYNTAX
 					 | "bne"
 					 | "blt"
 					 | "ble"
+					 
   syntax Ids   ::= List{Id,","}
   syntax AExps ::= List{AExp,","}
   syntax Stmts ::= List{Stmt,""}
@@ -107,7 +108,7 @@ module IMP
   rule <k> bne X:Id , I:Int , I2:Int ; => branch(I =/=Int I2, X) ...</k>
   rule <k> blt X:Id , I:Int , I2:Int ; => branch(I <Int I2, X) ...</k>
   rule <k> ble X:Id , I:Int , I2:Int ; => branch(I <=Int I2, X) ...</k>
-  
+  rule jmp X:Id; => jumpTo(X)
   syntax KItem ::= branch(Bool, Id)
 				 | jumpTo(Id)
 
