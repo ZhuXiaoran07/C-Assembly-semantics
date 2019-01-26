@@ -151,7 +151,7 @@ module IMP
   rule <k> X:Id : Is:Instrs => . ... </k>
        <pgm>... .Map => X |-> (Is) ...</pgm>
 
-  rule <k> int (X,Xs => Xs); ...</k>
+  rule <k> int (X,Xs => Xs1); ...</k>
        <env> Rho => Rho[X <- !N:Int] </env>
        <store>... .Map => !N |-> 0 ...</store>
   rule int .Ids; => .  [structural]
